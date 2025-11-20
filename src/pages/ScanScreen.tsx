@@ -9,20 +9,35 @@ export const ScanScreen: React.FC = () => {
 
     const [sessionItems, setSessionItems] = useState<string[]>([]);
     const [sessionPoints, setSessionPoints] = useState(0);
+    const [isScanning, setIsScanning] = useState(false);
+    const [scanMessage, setScanMessage] = useState('');
     const scannerRef = useRef<ScannerRef>(null);
 
     const handleScan = (item: string) => {
         setSessionItems(prev => [...prev, item]);
         setSessionPoints(prev => prev + 10);
+        setIsScanning(false);
+        setScanMessage('');
     };
 
     const handleManualScan = () => {
         console.log('🔘 Add Item button clicked');
-        console.log('Scanner ref:', scannerRef.current);
+        setIsScanning(true);
+        setScanMessage('');
+
         if (scannerRef.current) {
             scannerRef.current.forceDetect();
+            // Show "no item" message after 2 seconds if nothing detected
+            setTimeout(() => {
+                setIsScanning(false);
+                setScanMessage('❌ No item detected');
+                setTimeout(() => setScanMessage(''), 2000);
+            }, 2000);
         } else {
             console.error('❌ Scanner ref is null!');
+            setIsScanning(false);
+            setScanMessage('❌ Scanner not ready');
+            setTimeout(() => setScanMessage(''), 2000);
         }
     };
 
@@ -90,6 +105,15 @@ export const ScanScreen: React.FC = () => {
                     <div className="flex-1 relative bg-black rounded-3xl overflow-hidden border-4 border-white/10 shadow-2xl">
                         <Scanner ref={scannerRef} onScan={handleScan} />
 
+                        {/* Notification Toast */}
+                        {scanMessage && (
+                            <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-20 animate-fade-in-up">
+                                <div className="bg-red-600/90 backdrop-blur-xl px-8 py-4 rounded-2xl border border-red-400/30 shadow-2xl">
+                                    <div className="text-xl text-white font-bold">{scanMessage}</div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Corner Accents */}
                         <div className="absolute top-4 left-4 w-8 h-8 border-t-4 border-l-4 border-green-500/50 rounded-tl-xl pointer-events-none"></div>
                         <div className="absolute top-4 right-4 w-8 h-8 border-t-4 border-r-4 border-green-500/50 rounded-tr-xl pointer-events-none"></div>
@@ -102,10 +126,14 @@ export const ScanScreen: React.FC = () => {
                         {/* Scan Button */}
                         <button
                             onClick={handleManualScan}
-                            className="bg-yellow-600 hover:bg-yellow-500 text-white text-lg font-bold py-4 px-8 rounded-2xl transform transition hover:scale-105 shadow-lg flex items-center gap-3"
+                            disabled={isScanning}
+                            className={`text-white text-lg font-bold py-4 px-8 rounded-2xl transform transition shadow-lg flex items-center gap-3 ${isScanning
+                                    ? 'bg-yellow-400 cursor-wait opacity-75'
+                                    : 'bg-yellow-600 hover:bg-yellow-500 hover:scale-105'
+                                }`}
                         >
-                            <span className="text-2xl">📸</span>
-                            <span>Add Item</span>
+                            <span className="text-2xl">{isScanning ? '⏳' : '📸'}</span>
+                            <span>{isScanning ? 'Scanning...' : 'Add Item'}</span>
                         </button>
 
                         <button
