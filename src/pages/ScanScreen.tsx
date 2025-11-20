@@ -1,8 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Scanner, type ScannerRef } from '../components/scanner/Scanner';
+import { useIdleReset } from '../hooks/useIdleReset';
 
 export const ScanScreen: React.FC = () => {
+    const { getRemainingTime, reset } = useIdleReset(60000); // 60 seconds timeout for scanning
     const navigate = useNavigate();
     const location = useLocation();
     const user = location.state?.user;
@@ -12,8 +14,18 @@ export const ScanScreen: React.FC = () => {
     const [isScanning, setIsScanning] = useState(false);
     const [scanMessage, setScanMessage] = useState('');
     const scannerRef = useRef<ScannerRef>(null);
+    const [remainingTime, setRemainingTime] = useState(60);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setRemainingTime(Math.ceil(getRemainingTime() / 1000));
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [getRemainingTime]);
 
     const handleScan = (item: string) => {
+        reset(); // Reset idle timer on successful scan
         setSessionItems(prev => [...prev, item]);
         setSessionPoints(prev => prev + 10);
         setIsScanning(false);
@@ -22,6 +34,7 @@ export const ScanScreen: React.FC = () => {
 
     const handleManualScan = () => {
         console.log('🔘 Add Item button clicked');
+        reset(); // Reset idle timer when starting scan
         setIsScanning(true);
         setScanMessage('');
 
@@ -46,9 +59,36 @@ export const ScanScreen: React.FC = () => {
     };
 
     return (
-        <div className="w-full h-full bg-gradient-to-br from-gray-900 via-black to-green-900 text-white p-8 flex flex-col">
+        <div className="w-full h-full bg-gradient-to-br from-gray-900 via-black to-green-900 text-white p-8 flex flex-col relative">
+            {/* Idle Timer Indicator */}
+            <div className="absolute top-8 right-8 z-50 animate-fade-in">
+                <div className="flex items-center gap-3 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
+                    <div className="relative w-10 h-10 flex items-center justify-center">
+                        <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 36 36">
+                            <path
+                                className="text-white/10"
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="3"
+                            />
+                            <path
+                                className="text-green-500 transition-all duration-1000 ease-linear"
+                                strokeDasharray={`${(remainingTime / 60) * 100}, 100`}
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="3"
+                            />
+                        </svg>
+                        <span className="text-sm font-bold">{remainingTime}</span>
+                    </div>
+                    <span className="text-sm text-gray-400 font-medium pr-1">Auto-reset</span>
+                </div>
+            </div>
+
             {/* Header */}
-            <div className="flex justify-between items-center mb-8">
+            <div className="flex justify-between items-center mb-8 pl-20"> {/* Added padding-left to make room for back button if needed, though back button is absolute */}
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-2xl">♻️</div>
                     <div>
@@ -58,10 +98,21 @@ export const ScanScreen: React.FC = () => {
                         </p>
                     </div>
                 </div>
-                <div className="bg-white/10 backdrop-blur-md px-6 py-2 rounded-full border border-white/10">
+                <div className="bg-white/10 backdrop-blur-md px-6 py-2 rounded-full border border-white/10 mr-32"> {/* Added margin-right to avoid overlap with timer */}
                     <span className="text-green-400 font-bold">{sessionItems.length}</span> items scanned
                 </div>
             </div>
+
+            {/* Back Button */}
+            <button
+                onClick={() => navigate(-1)}
+                className="absolute top-8 left-8 z-50 w-12 h-12 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/10 transition-all hover:scale-110 group"
+                title="Go Back"
+            >
+                <svg className="w-6 h-6 text-white group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
 
             {/* Main Content Grid */}
             <div className="flex-1 grid grid-cols-12 gap-8 min-h-0">
@@ -128,8 +179,8 @@ export const ScanScreen: React.FC = () => {
                             onClick={handleManualScan}
                             disabled={isScanning}
                             className={`text-white text-lg font-bold py-4 px-8 rounded-2xl transform transition shadow-lg flex items-center gap-3 ${isScanning
-                                    ? 'bg-yellow-400 cursor-wait opacity-75'
-                                    : 'bg-yellow-600 hover:bg-yellow-500 hover:scale-105'
+                                ? 'bg-yellow-400 cursor-wait opacity-75'
+                                : 'bg-yellow-600 hover:bg-yellow-500 hover:scale-105'
                                 }`}
                         >
                             <span className="text-2xl">{isScanning ? '⏳' : '📸'}</span>
