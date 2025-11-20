@@ -1,0 +1,1 @@
+# trashure-kiosk
