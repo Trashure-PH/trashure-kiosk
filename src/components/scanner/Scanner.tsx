@@ -17,6 +17,7 @@ export const Scanner = forwardRef<ScannerRef, ScannerProps>(({ onScan }, ref) =>
     const [status, setStatus] = useState<'idle' | 'detecting' | 'success'>('idle');
     const [countdown, setCountdown] = useState(3);
     const [detectedItemName, setDetectedItemName] = useState('');
+    const [unknownItem, setUnknownItem] = useState<string | null>(null);
 
     const countdownInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -76,10 +77,19 @@ export const Scanner = forwardRef<ScannerRef, ScannerProps>(({ onScan }, ref) =>
     // Automatic state machine - triggers when detection found
     useEffect(() => {
         if (status === 'idle' && detection) {
-            console.log('🤖 Auto-detected:', detection.className);
-            setStatus('detecting');
-            setDetectedItemName(detection.className);
-            setCountdown(3);
+            if (detection.isAllowed) {
+                console.log('🤖 Auto-detected:', detection.className);
+                setStatus('detecting');
+                setDetectedItemName(detection.className);
+                setCountdown(3);
+                setUnknownItem(null);
+            } else {
+                // Handle unauthorized item
+                if (unknownItem !== detection.className) {
+                    console.log('⛔ Unknown item detected:', detection.className);
+                    setUnknownItem(detection.className);
+                }
+            }
         } else if (status === 'detecting') {
             // If detection is lost during countdown, reset
             if (!detection || detection.className !== detectedItemName) {
@@ -87,7 +97,12 @@ export const Scanner = forwardRef<ScannerRef, ScannerProps>(({ onScan }, ref) =>
                 setCountdown(3);
             }
         }
-    }, [detection, status, detectedItemName]);
+
+        // Clear unknown message if detection is lost
+        if (!detection && unknownItem) {
+            setUnknownItem(null);
+        }
+    }, [detection, status, detectedItemName, unknownItem]);
 
     useEffect(() => {
         if (status === 'detecting') {
@@ -149,13 +164,29 @@ export const Scanner = forwardRef<ScannerRef, ScannerProps>(({ onScan }, ref) =>
                 {!isModelLoading && !cameraError && (
                     <>
                         {status === 'idle' && (
-                            <div className="bg-black/40 backdrop-blur-md px-10 py-6 rounded-3xl border border-white/10 animate-float shadow-2xl">
-                                <div className="text-3xl font-bold text-white text-center">
-                                    Place item in Kiosk
-                                </div>
-                                <div className="text-gray-300 text-center mt-2 text-sm uppercase tracking-widest">
-                                    Auto-Detecting or Click "Add Item"
-                                </div>
+                            <div className="bg-black/40 backdrop-blur-md px-10 py-6 rounded-3xl border border-white/10 animate-float shadow-2xl relative overflow-hidden">
+                                {unknownItem ? (
+                                    <div className="animate-pulse">
+                                        <div className="text-3xl font-bold text-red-500 text-center mb-2">
+                                            Unknown Item
+                                        </div>
+                                        <div className="text-white text-center text-lg">
+                                            "{unknownItem}"
+                                        </div>
+                                        <div className="text-red-300 text-center mt-2 text-xs uppercase tracking-widest">
+                                            Please place a recyclable item
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="text-3xl font-bold text-white text-center">
+                                            Place item in Kiosk
+                                        </div>
+                                        <div className="text-gray-300 text-center mt-2 text-sm uppercase tracking-widest">
+                                            Auto-Detecting or Click "Add Item"
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         )}
 
@@ -213,8 +244,8 @@ export const Scanner = forwardRef<ScannerRef, ScannerProps>(({ onScan }, ref) =>
 
                         {status !== 'success' && (
                             <div className={`absolute inset-0 m-8 border-[4px] rounded-3xl transition-all duration-500 ${status === 'detecting'
-                                    ? 'border-yellow-400/60 scale-95 shadow-[inset_0_0_50px_rgba(234,179,8,0.2)]'
-                                    : 'border-white/10 scale-100'
+                                ? 'border-yellow-400/60 scale-95 shadow-[inset_0_0_50px_rgba(234,179,8,0.2)]'
+                                : 'border-white/10 scale-100'
                                 }`}>
                                 <div className="absolute top-0 left-0 w-16 h-16 border-t-8 border-l-8 border-white/40 rounded-tl-3xl" />
                                 <div className="absolute top-0 right-0 w-16 h-16 border-t-8 border-r-8 border-white/40 rounded-tr-3xl" />
