@@ -34,7 +34,6 @@ export const ReceiptScreen: React.FC = () => {
             setCountdown((prev) => {
                 if (prev <= 1) {
                     clearInterval(timer);
-                    navigate('/');
                     return 0;
                 }
                 return prev - 1;
@@ -42,7 +41,13 @@ export const ReceiptScreen: React.FC = () => {
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [navigate]);
+    }, []);
+
+    useEffect(() => {
+        if (countdown === 0) {
+            navigate('/');
+        }
+    }, [countdown, navigate]);
 
     return (
         <div className="relative flex flex-col h-full w-full bg-gradient-to-br from-gray-900 via-black to-green-900 text-white overflow-hidden">
