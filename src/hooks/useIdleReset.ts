@@ -14,7 +14,7 @@ export const useIdleReset = (timeout = 60000) => {
         }
     };
 
-    useIdleTimer({
+    return useIdleTimer({
         onIdle,
         timeout,
         throttle: 500

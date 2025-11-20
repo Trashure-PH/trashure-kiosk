@@ -1,13 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getUser } from '../services/userService';
 
+import { useIdleReset } from '../hooks/useIdleReset';
+
 export const LoginScreen: React.FC = () => {
+    const { getRemainingTime } = useIdleReset(30000); // Reset after 30 seconds of inactivity
     const navigate = useNavigate();
     const [showLoginInput, setShowLoginInput] = useState(false);
     const [username, setUsername] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [remainingTime, setRemainingTime] = useState(30);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setRemainingTime(Math.ceil(getRemainingTime() / 1000));
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [getRemainingTime]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -31,10 +43,37 @@ export const LoginScreen: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col items-center justify-center h-full w-full bg-gradient-to-br from-gray-900 via-black to-green-900 text-white p-8">
+        <div className="flex flex-col items-center justify-center h-full w-full bg-gradient-to-br from-gray-900 via-black to-green-900 text-white p-8 relative">
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute -top-24 -left-24 w-96 h-96 bg-green-500/20 rounded-full blur-3xl animate-pulse"></div>
                 <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-emerald-600/10 rounded-full blur-3xl"></div>
+            </div>
+
+            {/* Idle Timer Indicator */}
+            <div className="absolute top-8 right-8 z-50 animate-fade-in">
+                <div className="flex items-center gap-3 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
+                    <div className="relative w-10 h-10 flex items-center justify-center">
+                        <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 36 36">
+                            <path
+                                className="text-white/10"
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="3"
+                            />
+                            <path
+                                className="text-green-500 transition-all duration-1000 ease-linear"
+                                strokeDasharray={`${(remainingTime / 30) * 100}, 100`}
+                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="3"
+                            />
+                        </svg>
+                        <span className="text-sm font-bold">{remainingTime}</span>
+                    </div>
+                    <span className="text-sm text-gray-400 font-medium pr-1">Auto-reset</span>
+                </div>
             </div>
 
             {!showLoginInput ? (
@@ -52,9 +91,9 @@ export const LoginScreen: React.FC = () => {
                             <div className="w-24 h-24 bg-blue-500/20 rounded-full flex items-center justify-center mb-8 group-hover:bg-blue-500/30 transition-colors">
                                 <span className="text-5xl">👤</span>
                             </div>
-                            <h3 className="text-3xl font-bold mb-4 text-blue-400">Member</h3>
+                            <h3 className="text-3xl font-bold mb-4 text-blue-400">Trashure User</h3>
                             <p className="text-gray-400 text-center text-lg leading-relaxed">
-                                Log in to earn points and track your impact.
+                                Use your account to earn points and track your impact.
                             </p>
                         </button>
 
